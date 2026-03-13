@@ -33,15 +33,22 @@ export function getTempCardClass(temp: number): string {
   return 'sensor-card-green';
 }
 
-const SENSOR_LABELS: { label: string; position: 'top' | 'bottom'; corner: string }[] = [
-  { label: 'Top Front-Left', position: 'top', corner: 'FL' },
-  { label: 'Top Front-Right', position: 'top', corner: 'FR' },
-  { label: 'Top Rear-Left', position: 'top', corner: 'RL' },
-  { label: 'Top Rear-Right', position: 'top', corner: 'RR' },
-  { label: 'Bottom Front-Left', position: 'bottom', corner: 'FL' },
-  { label: 'Bottom Front-Right', position: 'bottom', corner: 'FR' },
-  { label: 'Bottom Rear-Left', position: 'bottom', corner: 'RL' },
-  { label: 'Bottom Rear-Right', position: 'bottom', corner: 'RR' },
+export interface SensorConfig {
+  label: string;
+  position: 'top' | 'bottom';
+  corner: string;
+  address: string;
+}
+
+const SENSOR_LABELS: SensorConfig[] = [
+  { label: 'Top Front Left',    position: 'top',    corner: 'FL', address: '28:8F:95:B4:00:00:00:2A' },
+  { label: 'Top Back Left',     position: 'top',    corner: 'BL', address: '28:5C:9E:71:00:00:00:7F' },
+  { label: 'Top Back Right',    position: 'top',    corner: 'BR', address: '28:55:15:52:00:00:00:AA' },
+  { label: 'Top Front Right',   position: 'top',    corner: 'FR', address: '28:C8:88:B3:00:00:00:CC' },
+  { label: 'Bottom Front Left', position: 'bottom', corner: 'FL', address: '28:BD:8C:B3:00:00:00:A0' },
+  { label: 'Bottom Back Left',  position: 'bottom', corner: 'BL', address: '28:DC:4F:78:00:00:00:95' },
+  { label: 'Bottom Back Right', position: 'bottom', corner: 'BR', address: '28:AA:79:7C:00:00:00:A9' },
+  { label: 'Bottom Front Right',position: 'bottom', corner: 'FR', address: '28:17:8E:54:00:00:00:7F' },
 ];
 
 function generateTemp(base: number, variance: number): number {
