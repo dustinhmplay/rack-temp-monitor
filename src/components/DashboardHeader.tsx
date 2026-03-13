@@ -1,7 +1,12 @@
-import { Server, Wifi } from 'lucide-react';
+import { Server, Wifi, WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-export default function DashboardHeader() {
+interface DashboardHeaderProps {
+  isLive?: boolean;
+  serialConnected?: boolean;
+}
+
+export default function DashboardHeader({ isLive = false, serialConnected = false }: DashboardHeaderProps) {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -21,10 +26,18 @@ export default function DashboardHeader() {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1.5 text-xs text-primary font-mono">
-          <div className="w-1.5 h-1.5 rounded-full bg-primary pulse-dot" />
-          <Wifi className="w-3.5 h-3.5" />
-          <span>LIVE</span>
+        <div className={`flex items-center gap-1.5 text-xs font-mono ${
+          isLive ? 'text-primary' : 'text-muted-foreground'
+        }`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${
+            isLive ? 'bg-primary pulse-dot' : 'bg-muted-foreground'
+          }`} />
+          {isLive ? (
+            <Wifi className="w-3.5 h-3.5" />
+          ) : (
+            <WifiOff className="w-3.5 h-3.5" />
+          )}
+          <span>{isLive ? (serialConnected ? 'LIVE' : 'API OK') : 'DEMO'}</span>
         </div>
         <div className="text-right">
           <p className="text-sm font-mono text-foreground">{time.toLocaleTimeString('en-US', { hour12: false })}</p>

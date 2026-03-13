@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { generateMockReadings, generateMockHistory, SensorReading, SensorHistory } from '@/lib/sensorData';
+import { fetchSensors, fetchHistory, isBackendAvailable } from '@/lib/api';
 import DashboardHeader from '@/components/DashboardHeader';
 import SensorCard from '@/components/SensorCard';
 import RackHeatMap from '@/components/RackHeatMap';
@@ -11,23 +12,68 @@ const Index = () => {
   const [sensors, setSensors] = useState<SensorReading[]>(generateMockReadings());
   const [history, setHistory] = useState<SensorHistory[]>(generateMockHistory());
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [isLive, setIsLive] = useState(false);
+  const [serialConnected, setSerialConnected] = useState(false);
 
-  const refresh = useCallback(() => {
-    setSensors(generateMockReadings());
-    setLastUpdate(new Date());
+  // Check backend availability on mount
+  useEffect(() => {
+    isBackendAvailable().then(setIsLive);
   }, []);
 
-  // Auto-refresh every 5 seconds (simulating serial polling)
+  const refresh = useCallback(async () => {
+    if (isLive) {
+      try {
+        const data = await fetchSensors();
+        if (data.sensors.length > 0) {
+          setSensors(data.sensors);
+          setSerialConnected(data.connected);
+        }
+        setLastUpdate(new Date());
+      } catch {
+        // Backend went away, fall back to mock
+        setIsLive(false);
+        setSensors(generateMockReadings());
+        setLastUpdate(new Date());
+      }
+    } else {
+      setSensors(generateMockReadings());
+      setLastUpdate(new Date());
+    }
+  }, [isLive]);
+
+  // Auto-refresh every 5 seconds
   useEffect(() => {
     const interval = setInterval(refresh, 5000);
     return () => clearInterval(interval);
   }, [refresh]);
 
-  // Regenerate history every 5 minutes
+  // Fetch history from backend or regenerate mock
   useEffect(() => {
-    const interval = setInterval(() => {
-      setHistory(generateMockHistory());
-    }, 5 * 60 * 1000);
+    const loadHistory = async () => {
+      if (isLive) {
+        try {
+          const data = await fetchHistory();
+          if (data.history.some(h => h.readings.length > 0)) {
+            setHistory(data.history);
+          }
+        } catch {
+          setHistory(generateMockHistory());
+        }
+      } else {
+        setHistory(generateMockHistory());
+      }
+    };
+    loadHistory();
+    const interval = setInterval(loadHistory, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isLive]);
+
+  // Periodically re-check backend availability
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const available = await isBackendAvailable();
+      setIsLive(available);
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -35,7 +81,7 @@ const Index = () => {
     <div className="min-h-screen bg-background p-6">
       <div className="scan-line" />
       <div className="max-w-7xl mx-auto">
-        <DashboardHeader />
+        <DashboardHeader isLive={isLive} serialConnected={serialConnected} />
 
         {/* Stats bar */}
         <StatsBar sensors={sensors} />
@@ -81,7 +127,7 @@ const Index = () => {
 
         {/* Footer */}
         <div className="mt-6 text-center text-[10px] font-mono text-muted-foreground">
-          Last update: {lastUpdate.toLocaleTimeString('en-US', { hour12: false })} • Refresh interval: 5s • Demo mode (mock data)
+          Last update: {lastUpdate.toLocaleTimeString('en-US', { hour12: false })} • Refresh interval: 5s • {isLive ? 'Live data (Arduino)' : 'Demo mode (mock data)'}
         </div>
       </div>
     </div>
