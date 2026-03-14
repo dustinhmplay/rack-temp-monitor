@@ -160,7 +160,7 @@ app.use(cors());
 // Current readings
 app.get('/api/sensors', (req, res) => {
   res.json({
-    sensors: latestReadings,
+    sensors: connected ? latestReadings : [],
     connected,
     lastUpdate: lastSerialData?.toISOString() || null,
   });
