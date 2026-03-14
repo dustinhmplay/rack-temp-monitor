@@ -8,8 +8,28 @@ import TemperatureChart from '@/components/TemperatureChart';
 import AlertPanel from '@/components/AlertPanel';
 import StatsBar from '@/components/StatsBar';
 
+// Generate zero readings for disconnected state
+const generateDisconnectedReadings = (): SensorReading[] => {
+  const labels = [
+    { label: 'Top Front Left', position: 'top' as const, corner: 'FL' },
+    { label: 'Top Back Left', position: 'top' as const, corner: 'BL' },
+    { label: 'Top Back Right', position: 'top' as const, corner: 'BR' },
+    { label: 'Top Front Right', position: 'top' as const, corner: 'FR' },
+    { label: 'Bottom Front Left', position: 'bottom' as const, corner: 'FL' },
+    { label: 'Bottom Back Left', position: 'bottom' as const, corner: 'BL' },
+    { label: 'Bottom Back Right', position: 'bottom' as const, corner: 'BR' },
+    { label: 'Bottom Front Right', position: 'bottom' as const, corner: 'FR' },
+  ];
+  return labels.map((s, i) => ({
+    sensorId: i + 1,
+    temperature: 0,
+    timestamp: new Date(),
+    ...s,
+  }));
+};
+
 const Index = () => {
-  const [sensors, setSensors] = useState<SensorReading[]>(generateMockReadings());
+  const [sensors, setSensors] = useState<SensorReading[]>(generateDisconnectedReadings());
   const [history, setHistory] = useState<SensorHistory[]>(generateMockHistory());
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [isLive, setIsLive] = useState(false);
@@ -27,16 +47,22 @@ const Index = () => {
         if (data.sensors.length > 0) {
           setSensors(data.sensors);
           setSerialConnected(data.connected);
+        } else {
+          // Backend is up but no sensor data — device unplugged
+          setSensors(generateDisconnectedReadings());
+          setSerialConnected(false);
         }
         setLastUpdate(new Date());
       } catch {
-        // Backend went away, fall back to mock
+        // Backend went away — show zeroed readings
         setIsLive(false);
-        setSensors(generateMockReadings());
+        setSensors(generateDisconnectedReadings());
+        setSerialConnected(false);
         setLastUpdate(new Date());
       }
     } else {
-      setSensors(generateMockReadings());
+      // No backend available — show zeroed readings (not mock)
+      setSensors(generateDisconnectedReadings());
       setLastUpdate(new Date());
     }
   }, [isLive]);
@@ -57,11 +83,10 @@ const Index = () => {
             setHistory(data.history);
           }
         } catch {
-          setHistory(generateMockHistory());
+          // Keep existing history on failure
         }
-      } else {
-        setHistory(generateMockHistory());
       }
+      // No backend — keep whatever history we have
     };
     loadHistory();
     const interval = setInterval(loadHistory, 5 * 60 * 1000);
@@ -127,7 +152,7 @@ const Index = () => {
 
         {/* Footer */}
         <div className="mt-6 text-center text-[10px] font-mono text-muted-foreground">
-          Last update: {lastUpdate.toLocaleTimeString('en-US', { hour12: false })} • Refresh interval: 5s • {isLive ? 'Live data (Arduino)' : 'Demo mode (mock data)'}
+          Last update: {lastUpdate.toLocaleTimeString('en-US', { hour12: false })} • Refresh interval: 5s • {isLive ? (serialConnected ? 'Live data (Arduino)' : 'API connected (no serial)') : 'Disconnected — waiting for backend'}
         </div>
       </div>
     </div>

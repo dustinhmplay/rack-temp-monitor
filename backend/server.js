@@ -1,23 +1,22 @@
 /**
  * Rack Thermal Monitor — Backend Server
- * 
- * Reads DS18B20 sensor data from Arduino via serial port
+ * * Reads DS18B20 sensor data from Arduino via serial port
  * and serves it as a REST API on port 3001.
- * 
- * SETUP:
- *   1. cd backend
- *   2. npm install
- *   3. Edit CONFIG below (COM port, baud rate)
- *   4. node server.js
- * 
- * Arduino should send JSON lines like:
- *   {"sensors":[{"id":1,"temp":32.5},{"id":2,"temp":28.1},...]}
+ * * SETUP:
+ * 1. cd backend
+ * 2. npm install
+ * 3. Edit CONFIG below (COM port, baud rate)
+ * 4. node server.js
+ * * Arduino should send JSON lines like:
+ * {"sensors":[{"id":1,"temp":32.5},{"id":2,"temp":28.1},...]}
  */
 
 const express = require('express');
 const cors = require('cors');
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
+const fs = require('fs');         // Added for file saving
+const path = require('path');     // Added for file paths
 
 // ──────────────────────────────────────────────
 // CONFIG — Edit these for your setup
@@ -27,8 +26,10 @@ const CONFIG = {
   BAUD_RATE: 9600,
   API_PORT: 3001,
   HISTORY_MAX_POINTS: 96,     // 96 x 15min = 24 hours
-  HISTORY_INTERVAL_MS: 15 * 60 * 1000, // 15 minutes
+  HISTORY_INTERVAL_MS: 15 * 60 * 1000, // Currently set to 1 second for testing. Change to 15 * 60 * 1000 for 15 minutes
 };
+
+const HISTORY_FILE = path.join(__dirname, 'history.json');
 
 // Sensor metadata (must match your wiring)
 const SENSOR_META = [
@@ -46,9 +47,23 @@ const SENSOR_META = [
 // State
 // ──────────────────────────────────────────────
 let latestReadings = [];
-let history = SENSOR_META.map(s => ({ sensorId: s.id, readings: [] }));
 let connected = false;
 let lastSerialData = null;
+
+// Load history from file or start fresh
+let history = [];
+try {
+  if (fs.existsSync(HISTORY_FILE)) {
+    const data = fs.readFileSync(HISTORY_FILE, 'utf8');
+    history = JSON.parse(data);
+    console.log(`✓ Loaded previous history from ${HISTORY_FILE}`);
+  } else {
+    history = SENSOR_META.map(s => ({ sensorId: s.id, readings: [] }));
+  }
+} catch (err) {
+  console.error('Error reading history file, starting fresh:', err.message);
+  history = SENSOR_META.map(s => ({ sensorId: s.id, readings: [] }));
+}
 
 // ──────────────────────────────────────────────
 // Serial Port
@@ -126,6 +141,14 @@ setInterval(() => {
       }
     }
   });
+
+  // Save the updated history to the hard drive
+  try {
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+  } catch (err) {
+    console.error('Failed to save history to disk:', err.message);
+  }
+
 }, CONFIG.HISTORY_INTERVAL_MS);
 
 // ──────────────────────────────────────────────
