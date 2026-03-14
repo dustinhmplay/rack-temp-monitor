@@ -152,7 +152,7 @@ const Index = () => {
 
         {/* Footer */}
         <div className="mt-6 text-center text-[10px] font-mono text-muted-foreground">
-          Last update: {lastUpdate.toLocaleTimeString('en-US', { hour12: false })} • Refresh interval: 5s • {isLive ? 'Live data (Arduino)' : 'Demo mode (mock data)'}
+          Last update: {lastUpdate.toLocaleTimeString('en-US', { hour12: false })} • Refresh interval: 5s • {isLive ? (serialConnected ? 'Live data (Arduino)' : 'API connected (no serial)') : 'Disconnected — waiting for backend'}
         </div>
       </div>
     </div>
