@@ -86,8 +86,7 @@ const Index = () => {
           // Keep existing history on failure
         }
       }
-        setHistory(generateMockHistory());
-      }
+      // No backend — keep whatever history we have
     };
     loadHistory();
     const interval = setInterval(loadHistory, 5 * 60 * 1000);
