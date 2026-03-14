@@ -83,9 +83,9 @@ const Index = () => {
             setHistory(data.history);
           }
         } catch {
-          setHistory(generateMockHistory());
+          // Keep existing history on failure
         }
-      } else {
+      }
         setHistory(generateMockHistory());
       }
     };
